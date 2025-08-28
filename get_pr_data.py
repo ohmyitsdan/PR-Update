@@ -12,16 +12,19 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 def get_last_week_date():
     today = datetime.datetime.now()
-    last_week = today - datetime.timedelta(days=7)
+    last_week = today - datetime.timedelta(days=5)
     return last_week.strftime("%Y-%m-%d")
 
 
-def search_merged_prs(username, date_range=None):
+def search_prs(username, type="merged", date_range=None):
     """Search for merged PRs by a specific GitHub user in the last week."""
     if not date_range:
         date_range = get_last_week_date()
 
-    query = f"type:pr is:merged author:{username} merged:>={date_range}"
+    query = f"type:pr is:{type} author:{username}"
+
+    if type == "merged":
+        query += f" merged:>={date_range}"
 
     params = {"q": query, "sort": "updated", "order": "desc", "per_page": 100}
 
@@ -48,7 +51,7 @@ def main():
         sys.exit(1)
 
     username = sys.argv[1]
-    prs = search_merged_prs(username)
+    prs = search_prs(username)
 
     print(f"\nMerged PRs by {username} in the last week:\n")
     if not prs:
