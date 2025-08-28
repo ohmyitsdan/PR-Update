@@ -1,7 +1,7 @@
 import datetime
 import os
 import json
-from get_pr_data import search_merged_prs
+from get_pr_data import search_prs
 
 from dotenv import load_dotenv
 
@@ -21,21 +21,38 @@ def create_update(users, output_dir):
         f.write(f"# {title}\n\n")
 
         for name, username in users.items():
-            prs = search_merged_prs(username)
+            merged_prs = search_prs(username)
 
-            f.write(f"## {name}\n\n")
+            open_prs = search_prs(username, type="open")
 
-            if not prs:
-                f.write("No merged PRs in the last week.\n\n")
+            f.write(f"### {name}\n\n")
+
+            if not all([merged_prs, open_prs]):
+                f.write("No PRs in the last week.\n\n")
                 continue
 
-            for pr in prs:
-                title = pr["title"]
-                url = pr["html_url"]
-                repo = pr["repository_url"].split("/")[-1]
-                merged_at = pr["closed_at"].split("T")[0]
-                f.write(f"- [{title}]({url}) in `{repo}` (merged on {merged_at})\n")
-            f.write("\n")
+            f.write("##### Merged\n\n")
+
+            if not merged_prs:
+                f.write("No merged PRs in the last week.\n\n")
+            else:
+                for pr in merged_prs:
+                    title = pr["title"]
+                    url = pr["html_url"]
+                    merged_at = pr["closed_at"].split("T")[0]
+                    f.write(f"- {title} - {url} (merged on {merged_at})\n")
+                f.write("\n")
+
+            f.write("##### Open\n\n")
+
+            if not merged_prs:
+                f.write("No open PRs in the last week.\n\n")
+            else:
+                for pr in open_prs:
+                    title = pr["title"]
+                    url = pr["html_url"]
+                    f.write(f"- {title} - {url}\n")
+                f.write("\n")
 
     print(f"Created update file: {filepath}")
 
