@@ -21,13 +21,13 @@ def create_update(users, output_dir):
         f.write(f"# {title}\n\n")
 
         for name, username in users.items():
-            merged_prs = search_prs(username)
-
-            open_prs = search_prs(username, type="open")
-
+            merged_prs = search_prs(username, pr_type="merged", repo="Beauhurst/UKF")
+            today = datetime.datetime.now(datetime.timezone.utc)
+            last_month = today - datetime.timedelta(days=30)
+            open_prs = search_prs(username, pr_type="open", date_range=last_month, repo="Beauhurst/UKF")
             f.write(f"### {name}\n\n")
 
-            if not all([merged_prs, open_prs]):
+            if not any([merged_prs, open_prs]):
                 f.write("No PRs in the last week.\n\n")
                 continue
 
@@ -45,7 +45,7 @@ def create_update(users, output_dir):
 
             f.write("##### Open\n\n")
 
-            if not merged_prs:
+            if not open_prs:
                 f.write("No open PRs in the last week.\n\n")
             else:
                 for pr in open_prs:
