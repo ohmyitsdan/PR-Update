@@ -11,20 +11,30 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 
 def get_last_week_date():
-    today = datetime.datetime.now()
+    today = datetime.datetime.now(datetime.timezone.utc)
     last_week = today - datetime.timedelta(days=5)
-    return last_week.strftime("%Y-%m-%d")
+    return last_week
 
 
-def search_prs(username, type="merged", date_range=None):
+def search_prs(username, pr_type="merged", date_range=None, repo=None):
     """Search for merged PRs by a specific GitHub user in the last week."""
     if not date_range:
         date_range = get_last_week_date()
 
-    query = f"type:pr is:{type} author:{username}"
+    print(f"Checking for {pr_type} PRs for {username} since {date_range.strftime('%d-%b')}")
 
-    if type == "merged":
-        query += f" merged:>={date_range}"
+    if type(date_range) != str:
+        date_range = date_range.strftime('%Y-%m-%d')
+
+    query = f"is:pr author:{username}"
+
+    if pr_type == "merged":
+        query += f" is:merged merged:>={date_range}"
+    else:
+        query += " is:open"
+
+    if repo:
+        query += f" repo:{repo}"
 
     params = {"q": query, "sort": "updated", "order": "desc", "per_page": 100}
 
@@ -42,29 +52,47 @@ def search_prs(username, type="merged", date_range=None):
         sys.exit(1)
 
     data = response.json()
+    total_count = data.get("total_count", 0)
     return data.get("items", [])
 
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: python3 get_pr_data.py <github_username>")
-        sys.exit(1)
-
-    username = sys.argv[1]
-    prs = search_prs(username)
-
-    print(f"\nMerged PRs by {username} in the last week:\n")
+def print_prs(prs, heading):
+    """Helper to print PR list nicely."""
+    print(f"\n{heading}:\n")
     if not prs:
-        print("No merged PRs found.")
+        print("None found.")
         return
 
     for pr in prs:
         title = pr["title"]
         url = pr["html_url"]
         repo = pr["repository_url"].split("/")[-1]
-        merged_at = pr["closed_at"].split("T")[0]
-        print(f"- [{title}]({url}) in {repo} (merged on {merged_at})")
+        date_field = "closed_at" if pr.get("closed_at") else "created_at"
+        date_value = pr[date_field].split("T")[0]
+        status = "merged" if pr.get("closed_at") else "opened"
+        print(f"- [{title}]({url}) in {repo} ({status} on {date_value})")
 
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python3 get_pr_data.py <github_username> [--count-only]")
+        sys.exit(1)
+    
+    username = sys.argv[1]
+    count_only = "--count-only" in sys.argv
+    
+    merged_prs = search_prs(username, pr_type="merged")
+    open_prs = search_prs(username, pr_type="open")
+    
+    if count_only:
+        print(f"Merged: {len(merged_prs)}")
+        print(f"Open: {len(open_prs)}")
+        print(f"Total: {len(merged_prs) + len(open_prs)}")
+    else:
+        print(f"\nTotal merged PRs: {len(merged_prs)}")
+        print(f"Total open PRs: {len(open_prs)}")
+        print_prs(merged_prs, f"Merged PRs by {username} in the last week")
+        print_prs(open_prs, f"Open PRs by {username}")
 
 if __name__ == "__main__":
     main()
