@@ -1,10 +1,11 @@
-import requests
 import datetime
-import sys
-from dotenv import load_dotenv
 import os
+import sys
 
-load_dotenv()
+import requests
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 GITHUB_API_URL = "https://api.github.com/search/issues"
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
@@ -54,6 +55,22 @@ def search_prs(username, pr_type="merged", date_range=None, repo=None):
     data = response.json()
     total_count = data.get("total_count", 0)
     return data.get("items", [])
+
+
+def get_pr_details(pr):
+    """Fetch full PR details including body."""
+    # Convert issues URL to pulls URL
+    # e.g. https://api.github.com/repos/Beauhurst/UKF/issues/123
+    #   -> https://api.github.com/repos/Beauhurst/UKF/pulls/123
+    url = pr["pull_request"]["url"]
+    headers = {"Accept": "application/vnd.github+json"}
+    if GITHUB_TOKEN:
+        headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        print(f"Warning: could not fetch PR details ({response.status_code})")
+        return pr
+    return {**pr, **response.json()}
 
 
 def print_prs(prs, heading):
