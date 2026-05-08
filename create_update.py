@@ -58,11 +58,14 @@ def create_update(users, output_dir):
 
     # Fetch all PR data up front so we can pass it to the summariser
     pr_data = {}
+    owner = os.getenv("OWNER")
+    repo = os.getenv("REPO")
+    repo_full = f"{owner}/{repo}"
     for name, username in users.items():
-        pr_data[name] = pr_data[name] = {
+        pr_data[name] = {
             "merged": [
                 get_pr_details(pr)
-                for pr in search_prs(username, pr_type="merged", repo="Beauhurst/UKF")
+                for pr in search_prs(username, pr_type="merged", repo=repo_full)
             ],
             "open": [
                 get_pr_details(pr)
@@ -70,7 +73,7 @@ def create_update(users, output_dir):
                     username,
                     pr_type="open",
                     date_range=last_month,
-                    repo="Beauhurst/UKF",
+                    repo=repo_full,
                 )
             ],
         }
